@@ -3,6 +3,7 @@ from loguru import logger
 from src.data_collectors.funding_rate import FundingRateCollector
 from src.data_collectors.kline_volume import KlineVolumeCollector
 from src.data_collectors.liquidation import LiquidationCollector
+from src.data_collectors.news_sentiment import NewsSentimentCollector
 
 
 class FactorAnalyzer:
@@ -12,22 +13,25 @@ class FactorAnalyzer:
         self.funding_rate_collector = FundingRateCollector()
         self.kline_volume_collector = KlineVolumeCollector()
         self.liquidation_collector = LiquidationCollector()
+        self.news_sentiment_collector = NewsSentimentCollector()
 
     def analyze_all_factors(self, symbol: str) -> Dict[str, Any]:
         """采集并分析所有因素"""
         logger.info(f"开始分析所有因素: {symbol}")
 
         try:
-            # 采集三个因素的数据
+            # 采集四个因素的数据
             funding_rate_data = self.funding_rate_collector.collect(symbol)
             kline_volume_data = self.kline_volume_collector.collect(symbol)
             liquidation_data = self.liquidation_collector.collect(symbol)
+            news_sentiment_data = self.news_sentiment_collector.collect(symbol)
 
             return {
                 "symbol": symbol,
                 "funding_rate": funding_rate_data,
                 "kline_volume": kline_volume_data,
                 "liquidation": liquidation_data,
+                "news_sentiment": news_sentiment_data,
             }
         except Exception as e:
             logger.error(f"分析因素失败: {str(e)}")
@@ -39,6 +43,7 @@ class FactorAnalyzer:
         fr = analysis_data["funding_rate"]
         kv = analysis_data["kline_volume"]
         lq = analysis_data["liquidation"]
+        ns = analysis_data["news_sentiment"]
 
         formatted_text = f"""
 【交易对】{symbol}
@@ -63,18 +68,48 @@ class FactorAnalyzer:
 - 成交量趋势: {kv['volume_trend']}
 - 成交量信号: {kv['volume_signal']}
 
-【爆仓数据分析】{'（模拟数据）' if lq.get('is_mock', False) else ''}
+【爆仓数据分析】{'' if lq.get('data_available', True) else '（无法获取数据）'}
 - 总爆仓金额: ${lq['total_liquidation']:,.0f}
 - 多单爆仓: ${lq['long_liquidation']:,.0f} ({lq['long_pct']:.1f}%)
 - 空单爆仓: ${lq['short_liquidation']:,.0f} ({lq['short_pct']:.1f}%)
 - 爆仓笔数: {lq['liquidation_count']}
 - 大额爆仓笔数: {len(lq['large_liquidations'])}
 - 信号: {lq['signal']}
+
+【消息面与情绪分析】{'' if ns.get('crypto_news', {}).get('data_available', True) else '（无法获取数据）'}
+- 整体情绪: {ns['overall_sentiment']['sentiment']}
+- 情绪得分: {ns['overall_sentiment']['score']:.2f}
+- 信号: {ns['overall_sentiment']['signal']}
+
+【加密货币新闻】
+- 新闻数量: {ns['crypto_news']['news_count']}
+- 正面新闻: {ns['crypto_news']['positive_count']}
+- 负面新闻: {ns['crypto_news']['negative_count']}
+- 中性新闻: {ns['crypto_news']['neutral_count']}
+- 情绪得分: {ns['crypto_news']['sentiment_score']:.2f}
+
+【社交媒体情绪】
+- Twitter关注者: {ns['social_sentiment'].get('twitter_followers', 0):,}
+- Reddit订阅者: {ns['social_sentiment'].get('reddit_subscribers', 0):,}
+- 社交情绪: {ns['social_sentiment'].get('sentiment', 'neutral')}
 """
 
+        # 添加大额爆仓详情
         if lq["large_liquidations"]:
             formatted_text += "\n【大额爆仓详情】\n"
-            for i, liq in enumerate(lq["large_liquidations"][:5], 1):  # 只显示前5笔
+            for i, liq in enumerate(lq["large_liquidations"][:5], 1):
                 formatted_text += f"  {i}. {liq['side']}: ${liq['amount']:,.0f} @ ${liq['price']:.2f}\n"
+
+        # 添加最新新闻标题
+        if ns['crypto_news']['news_list']:
+            formatted_text += "\n【最新相关新闻】\n"
+            for i, news in enumerate(ns['crypto_news']['news_list'][:3], 1):
+                formatted_text += f"  {i}. [{news['sentiment']}] {news['title']}\n"
+
+        # 添加宏观新闻
+        if ns['macro_news']['news_list']:
+            formatted_text += "\n【宏观财经新闻】\n"
+            for i, news in enumerate(ns['macro_news']['news_list'][:2], 1):
+                formatted_text += f"  {i}. {news['title']}\n"
 
         return formatted_text

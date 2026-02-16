@@ -25,6 +25,10 @@ class Settings:
     BINANCE_API_KEY = os.getenv("BINANCE_API_KEY", "")
     BINANCE_API_SECRET = os.getenv("BINANCE_API_SECRET", "")
 
+    # 消息面数据API配置
+    CRYPTOCOMPARE_API_KEY = os.getenv("CRYPTOCOMPARE_API_KEY", "")
+    NEWSAPI_KEY = os.getenv("NEWSAPI_KEY", "")
+
     # 数据采集配置
     FUNDING_RATE_EXTREME_THRESHOLD = 0.001  # ±0.1%
     LIQUIDATION_THRESHOLD = 100000  # 100,000 USDT

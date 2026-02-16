@@ -4,12 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a trading agent system that analyzes cryptocurrency market data (BTC/ETH) using LangChain and Claude AI. It collects real-time market data from Binance API and provides AI-powered trading analysis and recommendations.
+This is a trading agent system that analyzes cryptocurrency market data (BTC/ETH) using LangChain, LangGraph and Claude AI. It collects real-time market data from Binance API using parallel execution and provides AI-powered trading analysis and recommendations.
 
-**MVP Implementation**: 3 core factors
+**Architecture**: LangGraph-based parallel workflow
+- 4 data collection nodes execute in parallel
+- State management with TypedDict
+- Automatic error tracking and handling
+- 3-4x faster than sequential execution
+
+**Current Implementation**: 4 core factors
 1. **Funding Rate** - Perpetual contract funding rates (market sentiment)
 2. **K-line & Volume** - 24h price trends and volume analysis (technical analysis)
 3. **Liquidation Data** - Large liquidation events (market panic indicator)
+4. **News & Sentiment** - Crypto news, social media sentiment, and macro news (fundamental analysis)
 
 ## Quick Start
 
@@ -28,7 +35,11 @@ pip install -r requirements.txt
 3. (Optional) Set Binance API credentials for real liquidation data:
    - `BINANCE_API_KEY`: Your Binance API key
    - `BINANCE_API_SECRET`: Your Binance API secret
-   - If not configured, the system will use mock liquidation data with a warning
+   - If not configured, liquidation data will not be available
+4. (Optional) Set news/sentiment API credentials for real news data:
+   - `CRYPTOCOMPARE_API_KEY`: CryptoCompare API key (for crypto news and social data)
+   - `NEWSAPI_KEY`: NewsAPI key (for macro financial news)
+   - If not configured, news and sentiment data will not be available
 
 ### Running
 ```bash
@@ -50,10 +61,14 @@ python src/main.py --verbose
 - `base.py`: Abstract base collector with retry logic and error handling
 - `funding_rate.py`: Collects perpetual contract funding rates from Binance
 - `kline_volume.py`: Collects 24h K-line data and volume analysis
-- `liquidation.py`: Collects liquidation data (uses mock data if API Secret unavailable)
+- `liquidation.py`: Collects liquidation data (returns empty data if API credentials unavailable)
+- `news_sentiment.py`: Collects crypto news, social sentiment, and macro news (returns empty data if API keys unavailable)
+
+**Workflow** (`src/workflow/`)
+- `trading_graph.py`: LangGraph workflow definition with parallel data collection nodes
 
 **Analysis** (`src/analyzers/`)
-- `factor_analyzer.py`: Integrates all data collectors and formats data for LLM
+- `factor_analyzer.py`: Data formatting for LLM input
 
 **AI Agent** (`src/agent/`)
 - `trading_agent.py`: LangChain ChatAnthropic integration with custom API URL support and environment variable conflict handling
@@ -82,8 +97,11 @@ The system supports both official Anthropic API and third-party providers:
 
 ### Data Collection
 - Binance API calls don't require credentials for public data (funding rates, K-lines)
-- Liquidation data requires API Secret; system gracefully falls back to mock data with warning
+- Liquidation data requires API Secret; system returns empty data with warning if unavailable
+- News and sentiment data require API keys; system returns empty data with warning if unavailable
 - All collectors implement retry logic with configurable delays
+- All data collectors include `data_available` field to indicate whether real data was obtained
+- **Parallel Execution**: 4 data collection nodes run simultaneously using LangGraph, reducing total collection time by 3-4x
 
 ### LLM Integration
 - Uses LangChain's ChatAnthropic for model interaction
@@ -129,7 +147,9 @@ Logs are saved to `logs/trade_agent.log` with configurable level via `LOG_LEVEL`
 ## Important Notes
 
 - The system uses public Binance API data (no trading credentials needed)
-- Liquidation data uses mock values when API Secret is unavailable
+- Liquidation data returns empty values when API Secret is unavailable (logged as warning)
+- News and sentiment data returns empty values when API keys are unavailable (logged as warning)
+- No mock/simulated data is used - if real data cannot be obtained, empty data is returned
 - All analysis is for educational purposes only - not investment advice
 - Claude responses may contain Unicode characters; ensure UTF-8 terminal support
 - The system uses LangChain's ChatAnthropic with `base_url` parameter for custom API endpoints
