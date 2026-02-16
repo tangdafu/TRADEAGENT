@@ -21,6 +21,10 @@ class Settings:
     SYMBOL = os.getenv("SYMBOL", "BTCUSDT")
     SYMBOLS = ["BTCUSDT", "ETHUSDT"]
 
+    # Binance API 配置
+    BINANCE_API_KEY = os.getenv("BINANCE_API_KEY", "")
+    BINANCE_API_SECRET = os.getenv("BINANCE_API_SECRET", "")
+
     # 数据采集配置
     FUNDING_RATE_EXTREME_THRESHOLD = 0.001  # ±0.1%
     LIQUIDATION_THRESHOLD = 100000  # 100,000 USDT

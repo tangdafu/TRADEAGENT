@@ -25,6 +25,10 @@ pip install -r requirements.txt
    - `LLM_API_KEY`: Your API key
    - `MODEL_NAME`: Model to use (default: claude-sonnet-4-5-20250929)
    - `TEMPERATURE`: Model temperature (default: 0.3)
+3. (Optional) Set Binance API credentials for real liquidation data:
+   - `BINANCE_API_KEY`: Your Binance API key
+   - `BINANCE_API_SECRET`: Your Binance API secret
+   - If not configured, the system will use mock liquidation data with a warning
 
 ### Running
 ```bash
@@ -52,7 +56,7 @@ python src/main.py --verbose
 - `factor_analyzer.py`: Integrates all data collectors and formats data for LLM
 
 **AI Agent** (`src/agent/`)
-- `trading_agent.py`: LangChain ChatAnthropic integration with custom API URL support
+- `trading_agent.py`: LangChain ChatAnthropic integration with custom API URL support and environment variable conflict handling
 - `prompts.py`: System and analysis prompts for Claude
 
 **Utilities** (`src/utils/`)
@@ -66,7 +70,9 @@ python src/main.py --verbose
 
 ### Third-Party API Support
 The system supports both official Anthropic API and third-party providers:
-- Uses `base_url` parameter in ChatAnthropic for custom API endpoints
+- Uses LangChain's ChatAnthropic with `base_url` parameter for custom API endpoints
+- Automatically clears conflicting environment variables (ANTHROPIC_API_KEY, CCH_API_KEY) during initialization and API calls
+- This prevents authentication errors when using third-party API providers
 - Automatically uses custom base_url when `LLM_API_BASE_URL` is configured
 - Falls back to official API if no custom URL is provided
 
@@ -81,8 +87,10 @@ The system supports both official Anthropic API and third-party providers:
 
 ### LLM Integration
 - Uses LangChain's ChatAnthropic for model interaction
-- Creates analysis chains using prompt templates and LLM
+- Formats prompts using SystemMessage and HumanMessage from langchain_core
 - Handles both official Anthropic and third-party API providers transparently
+- Automatically clears conflicting environment variables during initialization and API calls to prevent authentication errors
+- Environment variables are temporarily removed and restored to avoid conflicts with Claude Code's CCH_API_KEY
 
 ## Common Tasks
 
@@ -95,8 +103,8 @@ The system supports both official Anthropic API and third-party providers:
 
 ### Modify Analysis Prompt
 Edit `src/agent/prompts.py`:
-- `get_system_prompt()`: System role definition
-- `get_analysis_prompt()`: Analysis template with market data placeholders
+- `SYSTEM_PROMPT`: System role definition
+- `ANALYSIS_PROMPT_TEMPLATE`: Analysis template with market data placeholders
 
 ### Change Default Settings
 Edit `config/settings.py`:
@@ -124,6 +132,8 @@ Logs are saved to `logs/trade_agent.log` with configurable level via `LOG_LEVEL`
 - Liquidation data uses mock values when API Secret is unavailable
 - All analysis is for educational purposes only - not investment advice
 - Claude responses may contain Unicode characters; ensure UTF-8 terminal support
-- The `base_url` parameter in ChatAnthropic is the correct way to specify custom API endpoints
+- The system uses LangChain's ChatAnthropic with `base_url` parameter for custom API endpoints
+- Conflicting environment variables (ANTHROPIC_API_KEY, CCH_API_KEY) are automatically cleared during initialization and API calls
+- This environment variable handling is critical when using third-party API providers to prevent authentication conflicts
 - Windows console encoding issues are handled by setting stdout to UTF-8 in `src/main.py`
 

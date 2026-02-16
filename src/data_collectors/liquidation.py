@@ -2,6 +2,7 @@ from typing import Dict, Any
 from binance.client import Client
 from loguru import logger
 from .base import BaseCollector
+from config.settings import settings
 
 
 class LiquidationCollector(BaseCollector):
@@ -9,7 +10,16 @@ class LiquidationCollector(BaseCollector):
 
     def __init__(self):
         super().__init__()
-        self.client = Client()
+        # 如果配置了API密钥，则使用认证客户端
+        if settings.BINANCE_API_KEY and settings.BINANCE_API_SECRET:
+            self.client = Client(
+                api_key=settings.BINANCE_API_KEY,
+                api_secret=settings.BINANCE_API_SECRET
+            )
+            logger.info("使用Binance API密钥初始化爆仓数据采集器")
+        else:
+            self.client = Client()
+            logger.warning("未配置Binance API密钥，将使用模拟爆仓数据")
 
     def collect(self, symbol: str) -> Dict[str, Any]:
         """采集爆仓数据"""
@@ -22,7 +32,16 @@ class LiquidationCollector(BaseCollector):
             except Exception as e:
                 # 如果需要API密钥，返回模拟数据
                 logger.warning(f"无法获取爆仓数据（需要API密钥），使用模拟数据: {str(e)}")
-                # 返回模拟的爆仓数据
+
+                # 获取当前价格用于生成合理的模拟数据
+                try:
+                    ticker = self.client.futures_ticker(symbol=symbol)
+                    current_price = float(ticker['lastPrice'])
+                except Exception:
+                    # 如果无法获取价格，使用默认值
+                    current_price = 50000.0 if 'BTC' in symbol else 2000.0
+
+                # 返回基于当前价格的模拟爆仓数据
                 return {
                     "total_liquidation": 250000,
                     "long_liquidation": 150000,
@@ -31,14 +50,15 @@ class LiquidationCollector(BaseCollector):
                     "short_pct": 40.0,
                     "large_liquidations": [
                         {
-                            "price": 69500.0,
+                            "price": current_price * 0.98,  # 当前价格下方2%
                             "qty": 2.0,
                             "amount": 139000.0,
                             "side": "多单",
                         }
                     ],
                     "liquidation_count": 15,
-                    "signal": "爆仓正常",
+                    "signal": "爆仓正常（模拟数据）",
+                    "is_mock": True,
                 }
 
             if not liquidations:
@@ -46,9 +66,12 @@ class LiquidationCollector(BaseCollector):
                     "total_liquidation": 0,
                     "long_liquidation": 0,
                     "short_liquidation": 0,
+                    "long_pct": 0.0,
+                    "short_pct": 0.0,
                     "large_liquidations": [],
                     "liquidation_count": 0,
                     "signal": "无大额爆仓",
+                    "is_mock": False,
                 }
 
             # 解析爆仓数据
@@ -110,6 +133,7 @@ class LiquidationCollector(BaseCollector):
                 "large_liquidations": large_liquidations,
                 "liquidation_count": len(liquidations),
                 "signal": signal,
+                "is_mock": False,
             }
 
         return self._retry_on_error(_fetch)

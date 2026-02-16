@@ -1,5 +1,3 @@
-from langchain_core.prompts import ChatPromptTemplate
-
 # 系统Prompt - 定义智能体角色
 SYSTEM_PROMPT = """你是一位专业的加密货币合约交易分析师，拥有10年以上的交易经验。
 
@@ -55,12 +53,3 @@ ANALYSIS_PROMPT_TEMPLATE = """请基于以下市场数据进行专业分析：
 【分析总结】
 [简要总结当前市场状况和交易逻辑]"""
 
-
-def get_analysis_prompt():
-    """获取分析Prompt模板"""
-    return ChatPromptTemplate.from_messages(
-        [
-            ("system", SYSTEM_PROMPT),
-            ("human", ANALYSIS_PROMPT_TEMPLATE),
-        ]
-    )

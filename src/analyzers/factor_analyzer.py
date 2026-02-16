@@ -63,7 +63,7 @@ class FactorAnalyzer:
 - 成交量趋势: {kv['volume_trend']}
 - 成交量信号: {kv['volume_signal']}
 
-【爆仓数据分析】
+【爆仓数据分析】{'（模拟数据）' if lq.get('is_mock', False) else ''}
 - 总爆仓金额: ${lq['total_liquidation']:,.0f}
 - 多单爆仓: ${lq['long_liquidation']:,.0f} ({lq['long_pct']:.1f}%)
 - 空单爆仓: ${lq['short_liquidation']:,.0f} ({lq['short_pct']:.1f}%)
