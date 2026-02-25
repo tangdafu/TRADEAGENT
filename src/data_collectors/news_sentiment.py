@@ -32,12 +32,20 @@ class NewsSentimentCollector(BaseCollector):
                 crypto_news, social_sentiment, macro_news
             )
 
+            # 检查是否有任何可用数据
+            data_available = (
+                crypto_news.get("data_available", False) or
+                social_sentiment.get("data_available", False) or
+                macro_news.get("data_available", False)
+            )
+
             return {
                 "crypto_news": crypto_news,
                 "social_sentiment": social_sentiment,
                 "macro_news": macro_news,
                 "overall_sentiment": overall_sentiment,
                 "timestamp": datetime.now().isoformat(),
+                "data_available": data_available,
             }
 
         return self._retry_on_error(_fetch)
@@ -64,7 +72,7 @@ class NewsSentimentCollector(BaseCollector):
             }
             headers = {"authorization": f"Apikey {self.cryptocompare_api_key}"}
 
-            response = requests.get(url, params=params, headers=headers, timeout=10)
+            response = requests.get(url, params=params, headers=headers, timeout=20)
             response.raise_for_status()
             data = response.json()
 
@@ -149,7 +157,7 @@ class NewsSentimentCollector(BaseCollector):
             params = {"coinId": self._get_coin_id(coin)}
             headers = {"authorization": f"Apikey {self.cryptocompare_api_key}"}
 
-            response = requests.get(url, params=params, headers=headers, timeout=10)
+            response = requests.get(url, params=params, headers=headers, timeout=20)
             response.raise_for_status()
             data = response.json()
 
@@ -212,7 +220,7 @@ class NewsSentimentCollector(BaseCollector):
                 "apiKey": self.newsapi_key,
             }
 
-            response = requests.get(url, params=params, timeout=10)
+            response = requests.get(url, params=params, timeout=20)
             response.raise_for_status()
             data = response.json()
 

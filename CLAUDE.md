@@ -8,15 +8,17 @@ This is a trading agent system that analyzes cryptocurrency market data (BTC/ETH
 
 **Architecture**: LangGraph-based parallel workflow
 - 4 data collection nodes execute in parallel
+- Market signal detection for smart AI analysis triggering
 - State management with TypedDict
 - Automatic error tracking and handling
 - 3-4x faster than sequential execution
 
-**Current Implementation**: 4 core factors
+**Current Implementation**: 4 core factors + Market Signal Detection
 1. **Funding Rate** - Perpetual contract funding rates (market sentiment)
 2. **K-line & Volume** - 24h price trends and volume analysis (technical analysis)
 3. **Liquidation Data** - Large liquidation events (market panic indicator)
 4. **News & Sentiment** - Crypto news, social media sentiment, and macro news (fundamental analysis)
+5. **Market Signal Detection** - Pre-analysis filtering to reduce unnecessary AI calls
 
 ## Quick Start
 
@@ -40,6 +42,14 @@ pip install -r requirements.txt
    - `CRYPTOCOMPARE_API_KEY`: CryptoCompare API key (for crypto news and social data)
    - `NEWSAPI_KEY`: NewsAPI key (for macro financial news)
    - If not configured, news and sentiment data will not be available
+5. (Optional) Configure market signal detection:
+   - `MARKET_SIGNAL_DETECTION_ENABLED`: Enable/disable smart filtering (default: true)
+   - `MIN_SIGNAL_COUNT`: Minimum signals required to trigger AI analysis (default: 2)
+   - `PRICE_CHANGE_THRESHOLD`: Price volatility threshold in % (default: 5.0)
+   - `FUNDING_RATE_CHANGE_THRESHOLD`: Funding rate change threshold (default: 0.0005)
+   - `VOLUME_SURGE_RATIO`: Volume surge multiplier (default: 2.0)
+   - `LARGE_LIQUIDATION_COUNT_THRESHOLD`: Large liquidation events threshold (default: 3)
+   - `NEWS_SENTIMENT_THRESHOLD`: News sentiment score threshold (default: 0.5)
 
 ### Running
 ```bash
@@ -65,10 +75,11 @@ python src/main.py --verbose
 - `news_sentiment.py`: Collects crypto news, social sentiment, and macro news (returns empty data if API keys unavailable)
 
 **Workflow** (`src/workflow/`)
-- `trading_graph.py`: LangGraph workflow definition with parallel data collection nodes
+- `trading_graph.py`: LangGraph workflow definition with parallel data collection nodes and market signal detection
 
 **Analysis** (`src/analyzers/`)
 - `factor_analyzer.py`: Data formatting for LLM input
+- `market_signal_detector.py`: Market signal detection for smart AI analysis triggering
 
 **AI Agent** (`src/agent/`)
 - `trading_agent.py`: LangChain ChatAnthropic integration with custom API URL support and environment variable conflict handling
@@ -103,6 +114,27 @@ The system supports both official Anthropic API and third-party providers:
 - All data collectors include `data_available` field to indicate whether real data was obtained
 - **Parallel Execution**: 4 data collection nodes run simultaneously using LangGraph, reducing total collection time by 3-4x
 
+### Market Signal Detection (Smart AI Triggering)
+The system includes intelligent market signal detection to reduce unnecessary AI API calls:
+- **Configurable**: Can be enabled/disabled via `MARKET_SIGNAL_DETECTION_ENABLED` setting
+- **Multi-factor Analysis**: Evaluates 5 types of signals:
+  1. **Funding Rate Signals**: Extreme rates or rapid changes indicating market sentiment shifts
+  2. **Price Volatility Signals**: Significant price movements (default: ±5% in 24h)
+  3. **Volume Anomaly Signals**: Unusual trading volume surges (default: 2x average)
+  4. **Liquidation Signals**: Large liquidation events indicating market panic
+  5. **News Sentiment Signals**: Extreme positive/negative news sentiment
+- **Threshold-based Triggering**: AI analysis only runs when minimum signal count is reached (default: 2 signals)
+- **Cost Optimization**: Skips AI analysis during low-volatility periods, saving API costs
+- **Detailed Logging**: All signal detections are logged with strength indicators (strong/medium)
+
+**Signal Detection Workflow**:
+```
+Data Collection (Parallel) → Market Signal Detection → Format Data → AI Analysis (Conditional)
+                                        ↓
+                              If signals < threshold: Skip AI, return "No opportunity"
+                              If signals ≥ threshold: Proceed to AI analysis
+```
+
 ### LLM Integration
 - Uses LangChain's ChatAnthropic for model interaction
 - Formats prompts using SystemMessage and HumanMessage from langchain_core
@@ -130,6 +162,30 @@ Edit `config/settings.py`:
 - `LIQUIDATION_THRESHOLD`: Large liquidation amount threshold (default 100,000 USDT)
 - `KLINE_INTERVAL`: K-line period (default 1h)
 - `KLINE_LIMIT`: Historical data points (default 24)
+
+### Configure Market Signal Detection
+Edit `.env` file to customize signal detection behavior:
+- `MARKET_SIGNAL_DETECTION_ENABLED=true`: Enable/disable smart filtering
+- `MIN_SIGNAL_COUNT=2`: Minimum signals to trigger AI analysis
+- `PRICE_CHANGE_THRESHOLD=5.0`: Price change % threshold
+- `FUNDING_RATE_CHANGE_THRESHOLD=0.0005`: Funding rate change threshold
+- `VOLUME_SURGE_RATIO=2.0`: Volume surge multiplier
+- `LARGE_LIQUIDATION_COUNT_THRESHOLD=3`: Large liquidation events count
+- `NEWS_SENTIMENT_THRESHOLD=0.5`: News sentiment score threshold
+
+**Example**: To make the system more sensitive (trigger AI more often):
+```bash
+MIN_SIGNAL_COUNT=1              # Trigger with just 1 signal
+PRICE_CHANGE_THRESHOLD=3.0      # Lower price threshold (3% instead of 5%)
+VOLUME_SURGE_RATIO=1.5          # Lower volume threshold
+```
+
+**Example**: To make the system more conservative (reduce AI calls):
+```bash
+MIN_SIGNAL_COUNT=3              # Require 3 signals
+PRICE_CHANGE_THRESHOLD=8.0      # Higher price threshold
+VOLUME_SURGE_RATIO=3.0          # Higher volume threshold
+```
 
 ## Testing
 

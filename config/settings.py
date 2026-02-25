@@ -35,6 +35,25 @@ class Settings:
     KLINE_INTERVAL = "1h"
     KLINE_LIMIT = 24  # 24小时
 
+    # 行情预判配置
+    MARKET_SIGNAL_DETECTION_ENABLED = os.getenv("MARKET_SIGNAL_DETECTION_ENABLED", "true").lower() == "true"
+    MIN_SIGNAL_COUNT = int(os.getenv("MIN_SIGNAL_COUNT", "2"))  # 最少触发信号数
+
+    # 资金费率信号阈值
+    FUNDING_RATE_CHANGE_THRESHOLD = float(os.getenv("FUNDING_RATE_CHANGE_THRESHOLD", "0.0005"))  # 0.05%
+
+    # 价格波动信号阈值
+    PRICE_CHANGE_THRESHOLD = float(os.getenv("PRICE_CHANGE_THRESHOLD", "5.0"))  # 5%
+
+    # 成交量信号阈值
+    VOLUME_SURGE_RATIO = float(os.getenv("VOLUME_SURGE_RATIO", "2.0"))  # 2倍均值
+
+    # 爆仓信号阈值
+    LARGE_LIQUIDATION_COUNT_THRESHOLD = int(os.getenv("LARGE_LIQUIDATION_COUNT_THRESHOLD", "3"))  # 3笔大额爆仓
+
+    # 消息面情绪阈值
+    NEWS_SENTIMENT_THRESHOLD = float(os.getenv("NEWS_SENTIMENT_THRESHOLD", "0.5"))  # 情绪得分±0.5
+
     # 日志配置
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     LOG_DIR = "logs"
