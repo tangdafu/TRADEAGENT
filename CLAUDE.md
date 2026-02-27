@@ -16,7 +16,7 @@ This is a trading agent system that analyzes cryptocurrency market data (BTC/ETH
 **Current Implementation**: 4 core factors + Market Signal Detection
 1. **Funding Rate** - Perpetual contract funding rates (market sentiment)
 2. **K-line & Volume** - 24h price trends and volume analysis (technical analysis)
-3. **Liquidation Data** - Large liquidation events (market panic indicator)
+3. **Market Pressure** - Open interest, long/short ratio, taker buy/sell volume (market pressure indicator)
 4. **News & Sentiment** - Crypto news, social media sentiment, and macro news (fundamental analysis)
 5. **Market Signal Detection** - Pre-analysis filtering to reduce unnecessary AI calls
 
@@ -34,21 +34,16 @@ pip install -r requirements.txt
    - `LLM_API_KEY`: Your API key
    - `MODEL_NAME`: Model to use (default: claude-sonnet-4-5-20250929)
    - `TEMPERATURE`: Model temperature (default: 0.3)
-3. (Optional) Set Binance API credentials for real liquidation data:
-   - `BINANCE_API_KEY`: Your Binance API key
-   - `BINANCE_API_SECRET`: Your Binance API secret
-   - If not configured, liquidation data will not be available
-4. (Optional) Set news/sentiment API credentials for real news data:
+3. (Optional) Set news/sentiment API credentials for real news data:
    - `CRYPTOCOMPARE_API_KEY`: CryptoCompare API key (for crypto news and social data)
    - `NEWSAPI_KEY`: NewsAPI key (for macro financial news)
    - If not configured, news and sentiment data will not be available
-5. (Optional) Configure market signal detection:
+4. (Optional) Configure market signal detection:
    - `MARKET_SIGNAL_DETECTION_ENABLED`: Enable/disable smart filtering (default: true)
    - `MIN_SIGNAL_COUNT`: Minimum signals required to trigger AI analysis (default: 2)
    - `PRICE_CHANGE_THRESHOLD`: Price volatility threshold in % (default: 5.0)
    - `FUNDING_RATE_CHANGE_THRESHOLD`: Funding rate change threshold (default: 0.0005)
    - `VOLUME_SURGE_RATIO`: Volume surge multiplier (default: 2.0)
-   - `LARGE_LIQUIDATION_COUNT_THRESHOLD`: Large liquidation events threshold (default: 3)
    - `NEWS_SENTIMENT_THRESHOLD`: News sentiment score threshold (default: 0.5)
 
 ### Running
@@ -71,7 +66,7 @@ python src/main.py --verbose
 - `base.py`: Abstract base collector with retry logic and error handling
 - `funding_rate.py`: Collects perpetual contract funding rates from Binance
 - `kline_volume.py`: Collects 24h K-line data and volume analysis
-- `liquidation.py`: Collects liquidation data (returns empty data if API credentials unavailable)
+- `liquidation.py`: Collects market pressure data using public APIs (open interest, long/short ratio, taker volume)
 - `news_sentiment.py`: Collects crypto news, social sentiment, and macro news (returns empty data if API keys unavailable)
 
 **Workflow** (`src/workflow/`)
@@ -107,12 +102,14 @@ The system supports both official Anthropic API and third-party providers:
 - This prevents encoding errors when displaying Claude's responses with special characters
 
 ### Data Collection
-- Binance API calls don't require credentials for public data (funding rates, K-lines)
-- Liquidation data requires API Secret; system returns empty data with warning if unavailable
+- Binance API calls don't require credentials for public data (funding rates, K-lines, market pressure data)
+- Market pressure data uses public APIs: open interest, long/short ratio, and taker buy/sell volume
 - News and sentiment data require API keys; system returns empty data with warning if unavailable
 - All collectors implement retry logic with configurable delays
 - All data collectors include `data_available` field to indicate whether real data was obtained
 - **Parallel Execution**: 4 data collection nodes run simultaneously using LangGraph, reducing total collection time by 3-4x
+
+**Note**: Binance liquidation data API has been deprecated. The system now uses market pressure indicators (open interest, long/short ratio, taker volume) as a more reliable alternative.
 
 ### Market Signal Detection (Smart AI Triggering)
 The system includes intelligent market signal detection to reduce unnecessary AI API calls:
@@ -121,7 +118,7 @@ The system includes intelligent market signal detection to reduce unnecessary AI
   1. **Funding Rate Signals**: Extreme rates or rapid changes indicating market sentiment shifts
   2. **Price Volatility Signals**: Significant price movements (default: ±5% in 24h)
   3. **Volume Anomaly Signals**: Unusual trading volume surges (default: 2x average)
-  4. **Liquidation Signals**: Large liquidation events indicating market panic
+  4. **Market Pressure Signals**: Extreme long/short ratios or buy/sell imbalances indicating overcrowding
   5. **News Sentiment Signals**: Extreme positive/negative news sentiment
 - **Threshold-based Triggering**: AI analysis only runs when minimum signal count is reached (default: 2 signals)
 - **Cost Optimization**: Skips AI analysis during low-volatility periods, saving API costs
@@ -159,7 +156,6 @@ Edit `src/agent/prompts.py`:
 ### Change Default Settings
 Edit `config/settings.py`:
 - `FUNDING_RATE_EXTREME_THRESHOLD`: Funding rate alert threshold (default ±0.1%)
-- `LIQUIDATION_THRESHOLD`: Large liquidation amount threshold (default 100,000 USDT)
 - `KLINE_INTERVAL`: K-line period (default 1h)
 - `KLINE_LIMIT`: Historical data points (default 24)
 
@@ -170,7 +166,6 @@ Edit `.env` file to customize signal detection behavior:
 - `PRICE_CHANGE_THRESHOLD=5.0`: Price change % threshold
 - `FUNDING_RATE_CHANGE_THRESHOLD=0.0005`: Funding rate change threshold
 - `VOLUME_SURGE_RATIO=2.0`: Volume surge multiplier
-- `LARGE_LIQUIDATION_COUNT_THRESHOLD=3`: Large liquidation events count
 - `NEWS_SENTIMENT_THRESHOLD=0.5`: News sentiment score threshold
 
 **Example**: To make the system more sensitive (trigger AI more often):
@@ -191,9 +186,10 @@ VOLUME_SURGE_RATIO=3.0          # Higher volume threshold
 
 Run test scripts in `tests/` directory:
 ```bash
-python tests/test_simple.py      # Basic system tests
-python tests/test_llm_config.py  # LLM configuration verification
-python tests/demo.py             # Data collection demonstration
+python tests/test_simple.py           # Basic system tests
+python tests/test_llm_config.py       # LLM configuration verification
+python tests/test_market_pressure.py  # Market pressure data collection test
+python tests/demo.py                  # Data collection demonstration
 ```
 
 ## Logging
@@ -202,8 +198,8 @@ Logs are saved to `logs/trade_agent.log` with configurable level via `LOG_LEVEL`
 
 ## Important Notes
 
-- The system uses public Binance API data (no trading credentials needed)
-- Liquidation data returns empty values when API Secret is unavailable (logged as warning)
+- The system uses public Binance API data (no API credentials needed for core functionality)
+- Market pressure data (open interest, long/short ratio, taker volume) is collected via public APIs
 - News and sentiment data returns empty values when API keys are unavailable (logged as warning)
 - No mock/simulated data is used - if real data cannot be obtained, empty data is returned
 - All analysis is for educational purposes only - not investment advice
@@ -212,4 +208,6 @@ Logs are saved to `logs/trade_agent.log` with configurable level via `LOG_LEVEL`
 - Conflicting environment variables (ANTHROPIC_API_KEY, CCH_API_KEY) are automatically cleared during initialization and API calls
 - This environment variable handling is critical when using third-party API providers to prevent authentication conflicts
 - Windows console encoding issues are handled by setting stdout to UTF-8 in `src/main.py`
+
+**Note on Liquidation Data**: Binance's liquidation data API (`/fapi/v1/allForceOrders`) has been deprecated. The system now uses alternative market pressure indicators that provide more reliable and comprehensive market analysis without requiring API credentials.
 

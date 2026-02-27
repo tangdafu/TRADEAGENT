@@ -182,21 +182,48 @@ class MarketSignalDetector:
     def _check_liquidation_signal(
         self, liquidation: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """检查爆仓信号"""
+        """检查市场压力信号（替代爆仓信号）"""
         if not liquidation or not liquidation.get("data_available"):
             return None
 
-        large_liquidations = liquidation.get("large_liquidations", [])
-        net_liquidation = liquidation.get("net_liquidation", 0)
+        risk_level = liquidation.get("risk_level", "")
+        long_short_ratio = float(liquidation.get("long_short_ratio", "1"))
+        long_pct = liquidation.get("long_account_pct", 50)
+        buy_sell_ratio = float(liquidation.get("buy_sell_ratio", "1"))
 
-        # 大额爆仓事件（强信号）
-        if len(large_liquidations) >= settings.LARGE_LIQUIDATION_COUNT_THRESHOLD:
-            return {
-                "type": "大额爆仓事件",
-                "strength": "强",
-                "value": len(large_liquidations),
-                "description": f"检测到 {len(large_liquidations)} 笔大额爆仓，净爆仓：{net_liquidation}",
-            }
+        # 高风险市场压力（强信号）
+        if risk_level == "高风险":
+            if long_short_ratio > 2.5 or long_pct > 75:
+                return {
+                    "type": "多头过度拥挤",
+                    "strength": "强",
+                    "value": long_short_ratio,
+                    "description": f"多空比 {long_short_ratio:.2f}，多头占比 {long_pct:.1f}%，警惕回调风险",
+                }
+            elif long_short_ratio < 0.5 or long_pct < 25:
+                return {
+                    "type": "空头过度拥挤",
+                    "strength": "强",
+                    "value": long_short_ratio,
+                    "description": f"多空比 {long_short_ratio:.2f}，空头占比 {100-long_pct:.1f}%，警惕反弹风险",
+                }
+
+        # 中等风险市场压力（中等信号）
+        elif risk_level == "中等风险":
+            if buy_sell_ratio > 1.2:
+                return {
+                    "type": "主动买盘强劲",
+                    "strength": "中",
+                    "value": buy_sell_ratio,
+                    "description": f"买卖比 {buy_sell_ratio:.2f}，主动买盘占优",
+                }
+            elif buy_sell_ratio < 0.8:
+                return {
+                    "type": "主动卖盘强劲",
+                    "strength": "中",
+                    "value": buy_sell_ratio,
+                    "description": f"买卖比 {buy_sell_ratio:.2f}，主动卖盘占优",
+                }
 
         return None
 

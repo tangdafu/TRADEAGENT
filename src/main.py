@@ -101,7 +101,7 @@ def main():
             print(f"数据采集节点: 4个 (并行执行)")
             print(f"  - 资金费率: {'✓' if final_state['funding_rate'] else '✗'}")
             print(f"  - K线数据: {'✓' if final_state['kline_volume'] else '✗'}")
-            print(f"  - 爆仓数据: {'✓' if final_state['liquidation'] else '✗'}")
+            print(f"  - 市场压力数据: {'✓' if final_state['liquidation'] else '✗'}")
             print(f"  - 消息面数据: {'✓' if final_state['news_sentiment'] else '✗'}")
             print(f"错误数量: {len(final_state['errors'])}")
             print("=" * 70)

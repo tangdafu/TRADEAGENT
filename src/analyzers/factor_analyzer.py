@@ -68,12 +68,15 @@ class FactorAnalyzer:
 - 成交量趋势: {kv['volume_trend']}
 - 成交量信号: {kv['volume_signal']}
 
-【爆仓数据分析】{'' if lq.get('data_available', True) else '（无法获取数据）'}
-- 总爆仓金额: ${lq['total_liquidation']:,.0f}
-- 多单爆仓: ${lq['long_liquidation']:,.0f} ({lq['long_pct']:.1f}%)
-- 空单爆仓: ${lq['short_liquidation']:,.0f} ({lq['short_pct']:.1f}%)
-- 爆仓笔数: {lq['liquidation_count']}
-- 大额爆仓笔数: {len(lq['large_liquidations'])}
+【市场压力分析】{'' if lq.get('data_available', True) else '（无法获取数据）'}
+- 持仓量: {lq['open_interest']}
+- 多空比: {lq['long_short_ratio']}
+- 多头占比: {lq['long_account_pct']:.1f}%
+- 空头占比: {lq['short_account_pct']:.1f}%
+- 买卖比: {lq['buy_sell_ratio']}
+- 主动买量: {lq['buy_volume']}
+- 主动卖量: {lq['sell_volume']}
+- 风险等级: {lq['risk_level']}
 - 信号: {lq['signal']}
 
 【消息面与情绪分析】{'' if ns.get('crypto_news', {}).get('data_available', True) else '（无法获取数据）'}
@@ -93,12 +96,6 @@ class FactorAnalyzer:
 - Reddit订阅者: {ns['social_sentiment'].get('reddit_subscribers', 0):,}
 - 社交情绪: {ns['social_sentiment'].get('sentiment', 'neutral')}
 """
-
-        # 添加大额爆仓详情
-        if lq["large_liquidations"]:
-            formatted_text += "\n【大额爆仓详情】\n"
-            for i, liq in enumerate(lq["large_liquidations"][:5], 1):
-                formatted_text += f"  {i}. {liq['side']}: ${liq['amount']:,.0f} @ ${liq['price']:.2f}\n"
 
         # 添加最新新闻标题
         if ns['crypto_news']['news_list']:

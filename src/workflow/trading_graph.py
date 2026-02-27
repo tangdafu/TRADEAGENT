@@ -94,27 +94,29 @@ def collect_kline_node(state: TradingState) -> Dict[str, Any]:
 
 
 def collect_liquidation_node(state: TradingState) -> Dict[str, Any]:
-    """采集爆仓数据节点"""
-    logger.info("节点: 采集爆仓数据")
+    """采集市场压力数据节点"""
+    logger.info("节点: 采集市场压力数据")
     try:
         collector = LiquidationCollector()
         data = collector.collect(state["symbol"])
 
         # 打印关键决策信息
         if data and data.get('data_available'):
-            logger.info(f"【爆仓数据决策信息】")
-            logger.info(f"  多头爆仓总额: {data.get('long_liquidation_total', 'N/A')}")
-            logger.info(f"  空头爆仓总额: {data.get('short_liquidation_total', 'N/A')}")
-            logger.info(f"  净爆仓: {data.get('net_liquidation', 'N/A')}")
-            logger.info(f"  市场情绪: {data.get('market_sentiment', 'N/A')}")
-            logger.info(f"  大额爆仓事件: {len(data.get('large_liquidations', []))} 笔")
+            logger.info(f"【市场压力数据决策信息】")
+            logger.info(f"  持仓量: {data.get('open_interest', 'N/A')}")
+            logger.info(f"  多空比: {data.get('long_short_ratio', 'N/A')}")
+            logger.info(f"  多头占比: {data.get('long_account_pct', 'N/A'):.1f}%")
+            logger.info(f"  空头占比: {data.get('short_account_pct', 'N/A'):.1f}%")
+            logger.info(f"  买卖比: {data.get('buy_sell_ratio', 'N/A')}")
+            logger.info(f"  风险等级: {data.get('risk_level', 'N/A')}")
+            logger.info(f"  信号: {data.get('signal', 'N/A')}")
         else:
-            logger.info(f"【爆仓数据决策信息】无可用数据（需要配置API密钥）")
+            logger.info(f"【市场压力数据决策信息】无可用数据")
 
-        logger.info("✓ 爆仓数据采集完成")
+        logger.info("✓ 市场压力数据采集完成")
         return {"liquidation": data, "errors": []}
     except Exception as e:
-        error_msg = f"爆仓数据采集失败: {str(e)}"
+        error_msg = f"市场压力数据采集失败: {str(e)}"
         logger.error(error_msg)
         return {"liquidation": None, "errors": [error_msg]}
 
@@ -256,7 +258,7 @@ def format_data_node(state: TradingState) -> Dict[str, Any]:
         # 打印格式化摘要
         logger.info(f"【数据格式化完成】")
         logger.info(f"  交易对: {state['symbol']}")
-        logger.info(f"  数据源: 资金费率✓ K线✓ 爆仓{'✓' if state['liquidation'] else '✗'} 消息面{'✓' if state['news_sentiment'] else '✗'}")
+        logger.info(f"  数据源: 资金费率✓ K线✓ 市场压力{'✓' if state['liquidation'] else '✗'} 消息面{'✓' if state['news_sentiment'] else '✗'}")
         logger.info(f"  格式化文本长度: {len(formatted_text)} 字符")
 
         if state["verbose"]:
@@ -384,7 +386,7 @@ def run_trading_analysis(symbol: str, verbose: bool = False) -> Dict[str, Any]:
         logger.info("入口节点（并行执行）:")
         logger.info("  ├─ collect_funding_rate  (采集资金费率)")
         logger.info("  ├─ collect_kline         (采集K线数据)")
-        logger.info("  ├─ collect_liquidation   (采集爆仓数据)")
+        logger.info("  ├─ collect_liquidation   (采集市场压力数据)")
         logger.info("  └─ collect_news          (采集消息面数据)")
         logger.info("")
         logger.info("数据处理节点:")
