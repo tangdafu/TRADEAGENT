@@ -10,32 +10,7 @@ class FactorAnalyzer:
     """因素分析器 - 整合所有数据采集器"""
 
     def __init__(self):
-        self.funding_rate_collector = FundingRateCollector()
-        self.kline_volume_collector = KlineVolumeCollector()
-        self.liquidation_collector = LiquidationCollector()
-        self.news_sentiment_collector = NewsSentimentCollector()
-
-    def analyze_all_factors(self, symbol: str) -> Dict[str, Any]:
-        """采集并分析所有因素"""
-        logger.info(f"开始分析所有因素: {symbol}")
-
-        try:
-            # 采集四个因素的数据
-            funding_rate_data = self.funding_rate_collector.collect(symbol)
-            kline_volume_data = self.kline_volume_collector.collect(symbol)
-            liquidation_data = self.liquidation_collector.collect(symbol)
-            news_sentiment_data = self.news_sentiment_collector.collect(symbol)
-
-            return {
-                "symbol": symbol,
-                "funding_rate": funding_rate_data,
-                "kline_volume": kline_volume_data,
-                "liquidation": liquidation_data,
-                "news_sentiment": news_sentiment_data,
-            }
-        except Exception as e:
-            logger.error(f"分析因素失败: {str(e)}")
-            raise
+        pass
 
     def format_for_llm(self, analysis_data: Dict[str, Any]) -> str:
         """将分析数据格式化为LLM可读的文本"""
