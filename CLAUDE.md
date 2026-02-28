@@ -6,19 +6,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a trading agent system that analyzes cryptocurrency market data (BTC/ETH) using LangChain, LangGraph and Claude AI. It collects real-time market data from Binance API using parallel execution and provides AI-powered trading analysis and recommendations.
 
-**Architecture**: LangGraph-based parallel workflow
+**Architecture**: LangGraph-based parallel workflow with persistence and alerting
 - 4 data collection nodes execute in parallel
 - Market signal detection for smart AI analysis triggering
 - State management with TypedDict
 - Automatic error tracking and handling
 - 3-4x faster than sequential execution
+- SQLite database for data persistence
+- Scheduled monitoring with configurable intervals
+- Feishu (Lark) alert integration for real-time notifications
 
-**Current Implementation**: 4 core factors + Market Signal Detection
+**Current Implementation**: 4 core factors + Market Signal Detection + Persistence + Alerting
 1. **Funding Rate** - Perpetual contract funding rates (market sentiment)
 2. **K-line & Volume** - 24h price trends and volume analysis (technical analysis)
 3. **Market Pressure** - Open interest, long/short ratio, taker buy/sell volume (market pressure indicator)
 4. **News & Sentiment** - Crypto news, social media sentiment, and macro news (fundamental analysis)
 5. **Market Signal Detection** - Pre-analysis filtering to reduce unnecessary AI calls
+6. **Data Persistence** - SQLite database for storing analysis records, signals, and performance tracking
+7. **Scheduled Monitoring** - 24/7 automated monitoring with configurable intervals
+8. **Smart Alerting** - Feishu webhook integration for instant trading signal notifications
 
 ## Quick Start
 
@@ -45,8 +51,14 @@ pip install -r requirements.txt
    - `FUNDING_RATE_CHANGE_THRESHOLD`: Funding rate change threshold (default: 0.0005)
    - `VOLUME_SURGE_RATIO`: Volume surge multiplier (default: 2.0)
    - `NEWS_SENTIMENT_THRESHOLD`: News sentiment score threshold (default: 0.5)
+5. (Optional) Configure Feishu alerting:
+   - `FEISHU_WEBHOOK`: Feishu webhook URL for receiving trading signal notifications
+   - Create webhook: Feishu group chat → Settings → Bots → Add Bot → Custom Bot
+   - Copy the webhook URL and paste into `.env`
 
 ### Running
+
+**Single Analysis Mode:**
 ```bash
 # Analyze BTC (default)
 python src/main.py
@@ -56,6 +68,23 @@ python src/main.py --symbol ETHUSDT
 
 # Verbose output with raw data
 python src/main.py --verbose
+
+# Save analysis to database
+python src/main.py --symbol BTCUSDT --save
+```
+
+**Monitoring Mode (24/7 automated monitoring):**
+```bash
+# Monitor single symbol (default 15 min interval)
+python src/main.py --symbols BTCUSDT --interval 15
+
+# Monitor multiple symbols
+python src/main.py --symbols BTCUSDT ETHUSDT SOLUSDT --interval 15
+
+# High-frequency monitoring (5 min interval)
+python src/main.py --symbols BTCUSDT --interval 5
+
+# Monitoring automatically saves to database and sends Feishu alerts when opportunities detected
 ```
 
 ## Architecture
@@ -83,6 +112,14 @@ python src/main.py --verbose
 **Utilities** (`src/utils/`)
 - `logger.py`: Loguru configuration for console and file logging
 - `formatters.py`: Output formatting and data presentation
+
+**Database** (`src/database/`)
+- `models.py`: SQLite database schema and ORM models
+- `repository.py`: Data access layer for analysis records, signals, and performance tracking
+
+**Scheduler** (`src/scheduler/`)
+- `task_scheduler.py`: Scheduled task management for automated monitoring
+- `alert_manager.py`: Multi-channel alerting (Feishu, console) with rich card formatting
 
 **Configuration**
 - `config/settings.py`: Centralized settings management, loads from `.env`
@@ -131,6 +168,32 @@ Data Collection (Parallel) → Market Signal Detection → Format Data → AI An
                               If signals < threshold: Skip AI, return "No opportunity"
                               If signals ≥ threshold: Proceed to AI analysis
 ```
+
+### Data Persistence
+The system automatically saves all analysis results to a SQLite database:
+- **Analysis Records**: Complete AI analysis with trading recommendations, support/resistance levels, confidence scores
+- **Signal Records**: Individual signal detections with type, strength, and values
+- **Price Records**: Historical price, volume, and funding rate snapshots
+- **Performance Tracking**: Track signal accuracy and returns over time (1h, 4h, 24h)
+- **Database Location**: `data/trading_agent.db` (auto-created on first run)
+- **Query Support**: Built-in repository methods for historical analysis and statistics
+
+### Scheduled Monitoring
+24/7 automated market monitoring with flexible configuration:
+- **Multi-symbol Support**: Monitor multiple trading pairs simultaneously
+- **Configurable Intervals**: Set monitoring frequency (default: 15 minutes)
+- **Background Execution**: Runs in separate thread, non-blocking
+- **Automatic Alerting**: Sends Feishu notifications when trading opportunities detected
+- **Graceful Shutdown**: Handles Ctrl+C for clean exit
+
+### Smart Alerting (Feishu Integration)
+Real-time trading signal notifications via Feishu (Lark) webhooks:
+- **Rich Card Format**: Beautiful interactive cards with color-coded headers
+- **Complete Strategy**: Includes full AI analysis, entry/exit points, risk management
+- **Mobile Friendly**: Optimized for mobile viewing
+- **Conditional Sending**: Only sends alerts when `has_trading_opportunity` is true
+- **Error Handling**: Graceful fallback if webhook fails
+- **Daily Reports**: Optional daily summary statistics (can be scheduled)
 
 ### LLM Integration
 - Uses LangChain's ChatAnthropic for model interaction
@@ -182,15 +245,59 @@ PRICE_CHANGE_THRESHOLD=8.0      # Higher price threshold
 VOLUME_SURGE_RATIO=3.0          # Higher volume threshold
 ```
 
+### Set Up Feishu Alerting
+1. Open Feishu group chat where you want to receive alerts
+2. Click Settings (top right) → Group Bots → Add Bot → Custom Bot
+3. Set bot name and description (e.g., "Trading Signal Bot")
+4. Copy the webhook URL
+5. Add to `.env` file: `FEISHU_WEBHOOK=https://open.feishu.cn/open-apis/bot/v2/hook/your_token`
+6. Test with: `python tests/test_feishu.py` (if available)
+
+### Query Historical Data
+Use the database repository to query historical analysis:
+```python
+from src.database.models import Database
+from src.database.repository import AnalysisRepository
+
+db = Database("data/trading_agent.db")
+repo = AnalysisRepository(db)
+
+# Get recent analyses for BTC
+recent = repo.get_recent_analyses("BTCUSDT", limit=10)
+
+# Get statistics
+stats = repo.get_statistics("BTCUSDT", days=7)
+```
+
+### Set Up Monitoring Mode
+For 24/7 automated monitoring:
+```bash
+# Create a systemd service (Linux) or Task Scheduler (Windows)
+# Run: python src/main.py --symbols BTCUSDT ETHUSDT --interval 15
+
+# Or use screen/tmux for background execution:
+screen -S trading_monitor
+python src/main.py --symbols BTCUSDT ETHUSDT --interval 15
+# Detach with Ctrl+A, D
+```
+
 ## Testing
 
 Run test scripts in `tests/` directory:
 ```bash
-python tests/test_simple.py           # Basic system tests
-python tests/test_llm_config.py       # LLM configuration verification
-python tests/test_market_pressure.py  # Market pressure data collection test
-python tests/demo.py                  # Data collection demonstration
+# New features testing
+python tests/test_new_features.py      # Database, repository, and alert manager tests
+python tests/test_feishu.py            # Feishu webhook connection test
+python tests/test_full_analysis.py     # Complete AI strategy and alert test
+
+# Legacy tests (may be deprecated)
+python tests/test_simple.py            # Basic system tests
+python tests/test_llm_config.py        # LLM configuration verification
+python tests/test_market_pressure.py   # Market pressure data collection test
+python tests/demo.py                   # Data collection demonstration
 ```
+
+**Note**: Some legacy test files may have been removed. Check `tests/` directory for available tests.
 
 ## Logging
 
@@ -208,6 +315,59 @@ Logs are saved to `logs/trade_agent.log` with configurable level via `LOG_LEVEL`
 - Conflicting environment variables (ANTHROPIC_API_KEY, CCH_API_KEY) are automatically cleared during initialization and API calls
 - This environment variable handling is critical when using third-party API providers to prevent authentication conflicts
 - Windows console encoding issues are handled by setting stdout to UTF-8 in `src/main.py`
+- **Database**: Analysis records are automatically saved to `data/trading_agent.db` when using `--save` flag or monitoring mode
+- **Feishu Alerts**: Only sent when trading opportunities are detected (`has_trading_opportunity=true`)
+- **Monitoring Mode**: Runs continuously until interrupted with Ctrl+C, automatically saves all analyses to database
 
 **Note on Liquidation Data**: Binance's liquidation data API (`/fapi/v1/allForceOrders`) has been deprecated. The system now uses alternative market pressure indicators that provide more reliable and comprehensive market analysis without requiring API credentials.
+
+## Project Structure
+
+```
+tradeAgent/
+├── config/                      # Configuration files
+│   └── settings.py             # Centralized settings
+├── src/
+│   ├── data_collectors/        # Data collection modules
+│   │   ├── base.py            # Base collector with retry logic
+│   │   ├── funding_rate.py    # Funding rate collector
+│   │   ├── kline_volume.py    # K-line and volume collector
+│   │   ├── liquidation.py     # Market pressure collector
+│   │   └── news_sentiment.py  # News and sentiment collector
+│   ├── analyzers/              # Analysis modules
+│   │   ├── factor_analyzer.py        # Data formatting for LLM
+│   │   └── market_signal_detector.py # Signal detection logic
+│   ├── workflow/               # LangGraph workflow
+│   │   └── trading_graph.py   # Parallel workflow definition
+│   ├── agent/                  # AI agent
+│   │   ├── trading_agent.py   # ChatAnthropic integration
+│   │   └── prompts.py         # System and analysis prompts
+│   ├── database/               # Data persistence (NEW)
+│   │   ├── models.py          # Database schema and ORM
+│   │   └── repository.py      # Data access layer
+│   ├── scheduler/              # Scheduling and alerting (NEW)
+│   │   ├── task_scheduler.py  # Task scheduling
+│   │   └── alert_manager.py   # Multi-channel alerting
+│   ├── utils/                  # Utilities
+│   │   ├── logger.py          # Logging configuration
+│   │   └── formatters.py      # Output formatting
+│   └── main.py                 # Main entry point
+├── tests/                       # Test scripts
+├── docs/                        # Documentation (NEW)
+├── logs/                        # Log files
+├── data/                        # Database files (NEW)
+├── .env.example                # Environment variables template
+├── requirements.txt            # Python dependencies
+├── README.md                   # Project documentation
+└── CLAUDE.md                   # This file
+```
+
+## Additional Documentation
+
+For more detailed information, see:
+- [README.md](README.md) - Complete project documentation with usage examples
+- [PROJECT_FINAL.md](PROJECT_FINAL.md) - Project completion summary and features overview
+- [docs/DATABASE_GUIDE.md](docs/DATABASE_GUIDE.md) - Database schema and query examples (if available)
+- [docs/USAGE_GUIDE.md](docs/USAGE_GUIDE.md) - Detailed usage guide (if available)
+- [docs/FEISHU_TROUBLESHOOTING.md](docs/FEISHU_TROUBLESHOOTING.md) - Feishu setup and troubleshooting (if available)
 
