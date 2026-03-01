@@ -50,12 +50,12 @@ def collect_funding_rate_node(state: TradingState) -> Dict[str, Any]:
 
         # 打印关键决策信息
         if data:
-            logger.info(f"【资金费率决策信息】")
-            logger.info(f"  当前费率: {data.get('current_rate', 'N/A'):.4%}")
-            logger.info(f"  24h平均: {data.get('avg_rate_24h', 'N/A'):.4%}")
-            logger.info(f"  趋势: {data.get('trend', 'N/A')}")
-            logger.info(f"  是否极端: {data.get('is_extreme', False)}")
-            logger.info(f"  信号: {data.get('signal', 'N/A')}")
+            logger.debug(f"【资金费率决策信息】")
+            logger.debug(f"  当前费率: {data.get('current_rate', 'N/A'):.4%}")
+            logger.debug(f"  24h平均: {data.get('avg_rate_24h', 'N/A'):.4%}")
+            logger.debug(f"  趋势: {data.get('trend', 'N/A')}")
+            logger.debug(f"  是否极端: {data.get('is_extreme', False)}")
+            logger.debug(f"  信号: {data.get('signal', 'N/A')}")
 
         logger.info("✓ 资金费率数据采集完成")
         return {"funding_rate": data, "errors": []}
@@ -74,16 +74,16 @@ def collect_kline_node(state: TradingState) -> Dict[str, Any]:
 
         # 打印关键决策信息
         if data:
-            logger.info(f"【K线数据决策信息】")
-            logger.info(f"  当前价格: {data.get('current_price', 'N/A')}")
+            logger.debug(f"【K线数据决策信息】")
+            logger.debug(f"  当前价格: {data.get('current_price', 'N/A')}")
             price_change_pct = data.get('price_change_pct', 0)
             if isinstance(price_change_pct, (int, float)):
-                logger.info(f"  24h涨跌幅: {price_change_pct:.2f}%")
+                logger.debug(f"  24h涨跌幅: {price_change_pct:.2f}%")
             else:
-                logger.info(f"  24h涨跌幅: {price_change_pct}")
-            logger.info(f"  价格趋势: {data.get('price_trend', 'N/A')}")
-            logger.info(f"  成交量趋势: {data.get('volume_trend', 'N/A')}")
-            logger.info(f"  成交量信号: {data.get('volume_signal', 'N/A')}")
+                logger.debug(f"  24h涨跌幅: {price_change_pct}")
+            logger.debug(f"  价格趋势: {data.get('price_trend', 'N/A')}")
+            logger.debug(f"  成交量趋势: {data.get('volume_trend', 'N/A')}")
+            logger.debug(f"  成交量信号: {data.get('volume_signal', 'N/A')}")
 
         logger.info("✓ K线数据采集完成")
         return {"kline_volume": data, "errors": []}
@@ -102,16 +102,16 @@ def collect_liquidation_node(state: TradingState) -> Dict[str, Any]:
 
         # 打印关键决策信息
         if data and data.get('data_available'):
-            logger.info(f"【市场压力数据决策信息】")
-            logger.info(f"  持仓量: {data.get('open_interest', 'N/A')}")
-            logger.info(f"  多空比: {data.get('long_short_ratio', 'N/A')}")
-            logger.info(f"  多头占比: {data.get('long_account_pct', 'N/A'):.1f}%")
-            logger.info(f"  空头占比: {data.get('short_account_pct', 'N/A'):.1f}%")
-            logger.info(f"  买卖比: {data.get('buy_sell_ratio', 'N/A')}")
-            logger.info(f"  风险等级: {data.get('risk_level', 'N/A')}")
-            logger.info(f"  信号: {data.get('signal', 'N/A')}")
+            logger.debug(f"【市场压力数据决策信息】")
+            logger.debug(f"  持仓量: {data.get('open_interest', 'N/A')}")
+            logger.debug(f"  多空比: {data.get('long_short_ratio', 'N/A')}")
+            logger.debug(f"  多头占比: {data.get('long_account_pct', 'N/A'):.1f}%")
+            logger.debug(f"  空头占比: {data.get('short_account_pct', 'N/A'):.1f}%")
+            logger.debug(f"  买卖比: {data.get('buy_sell_ratio', 'N/A')}")
+            logger.debug(f"  风险等级: {data.get('risk_level', 'N/A')}")
+            logger.debug(f"  信号: {data.get('signal', 'N/A')}")
         else:
-            logger.info(f"【市场压力数据决策信息】无可用数据")
+            logger.debug(f"【市场压力数据决策信息】无可用数据")
 
         logger.info("✓ 市场压力数据采集完成")
         return {"liquidation": data, "errors": []}
@@ -130,38 +130,38 @@ def collect_news_node(state: TradingState) -> Dict[str, Any]:
 
         # 打印关键决策信息
         if data and data.get('data_available'):
-            logger.info(f"【消息面数据决策信息】")
+            logger.debug(f"【消息面数据决策信息】")
 
             # 打印加密货币新闻
             crypto_news = data.get('crypto_news', {})
             news_list = crypto_news.get('news_list', [])
-            logger.info(f"  加密货币新闻: {len(news_list)} 条")
+            logger.debug(f"  加密货币新闻: {len(news_list)} 条")
             if news_list:
-                logger.info(f"  最新新闻标题:")
+                logger.debug(f"  最新新闻标题:")
                 for i, news in enumerate(news_list[:3], 1):  # 只显示前3条
                     title = news.get('title', 'N/A')
                     sentiment = news.get('sentiment', 'N/A')
-                    logger.info(f"    {i}. [{sentiment}] {title[:80]}{'...' if len(title) > 80 else ''}")
+                    logger.debug(f"    {i}. [{sentiment}] {title[:80]}{'...' if len(title) > 80 else ''}")
 
             # 打印社交媒体情绪
-            logger.info(f"  社交媒体情绪: {data.get('social_sentiment', {}).get('sentiment', 'N/A')}")
+            logger.debug(f"  社交媒体情绪: {data.get('social_sentiment', {}).get('sentiment', 'N/A')}")
 
             # 打印宏观新闻
             macro_news = data.get('macro_news', {})
             macro_list = macro_news.get('news_list', [])
-            logger.info(f"  宏观新闻: {len(macro_list)} 条")
+            logger.debug(f"  宏观新闻: {len(macro_list)} 条")
             if macro_list:
-                logger.info(f"  最新宏观新闻:")
+                logger.debug(f"  最新宏观新闻:")
                 for i, news in enumerate(macro_list[:2], 1):  # 只显示前2条
                     title = news.get('title', 'N/A')
-                    logger.info(f"    {i}. {title[:80]}{'...' if len(title) > 80 else ''}")
+                    logger.debug(f"    {i}. {title[:80]}{'...' if len(title) > 80 else ''}")
 
             # 打印整体情绪
             overall = data.get('overall_sentiment', {})
-            logger.info(f"  整体情绪: {overall.get('sentiment', 'N/A')} (得分: {overall.get('score', 0):.2f})")
-            logger.info(f"  信号: {overall.get('signal', 'N/A')}")
+            logger.debug(f"  整体情绪: {overall.get('sentiment', 'N/A')} (得分: {overall.get('score', 0):.2f})")
+            logger.debug(f"  信号: {overall.get('signal', 'N/A')}")
         else:
-            logger.info(f"【消息面数据决策信息】无可用数据（需要配置API密钥）")
+            logger.debug(f"【消息面数据决策信息】无可用数据（需要配置API密钥）")
 
         logger.info("✓ 消息面数据采集完成")
         return {"news_sentiment": data, "errors": []}
@@ -221,6 +221,7 @@ def market_signal_detection_node(state: TradingState) -> Dict[str, Any]:
         return {
             "has_trading_opportunity": has_opportunity,
             "signal_summary": signal_summary,
+            "triggered_signals": signals,  # 添加触发的信号列表
             "errors": [],
         }
     except Exception as e:
@@ -291,24 +292,91 @@ def ai_analysis_node(state: TradingState) -> Dict[str, Any]:
         agent = TradingAgent()
         result = agent.analyze(state["formatted_data"])
 
+        # 在AI分析结果前添加采集数据摘要
+        data_summary = _build_data_summary(state)
+        full_result = f"{data_summary}\n\n{result}"
+
         # 打印AI分析决策摘要
         logger.info(f"【AI分析决策完成】")
-        logger.info(f"  分析结果长度: {len(result)} 字符")
+        logger.info(f"  分析结果长度: {len(full_result)} 字符")
 
         # 提取关键决策信息（如果结果中包含）
-        if result:
+        if full_result:
             # 记录完整的AI分析结果到日志文件
             logger.info("=" * 70)
             logger.info("【完整AI分析结果】")
-            logger.info(result)
+            logger.info(full_result)
             logger.info("=" * 70)
 
         logger.info("✓ AI分析完成")
-        return {"analysis_result": result, "errors": []}
+        return {"analysis_result": full_result, "errors": []}
     except Exception as e:
         error_msg = f"AI分析失败: {str(e)}"
         logger.error(error_msg)
         return {"analysis_result": None, "errors": [error_msg]}
+
+
+def _build_data_summary(state: TradingState) -> str:
+    """构建采集数据摘要"""
+    lines = ["=" * 70, "【市场数据摘要】", ""]
+
+    # K线数据
+    kline_data = state.get('kline_volume', {})
+    if kline_data:
+        current_price = kline_data.get('current_price')
+        price_change = kline_data.get('price_change_pct')
+        volume_change = kline_data.get('volume_change_pct')
+
+        if current_price:
+            lines.append(f"当前价格: ${current_price:,.2f}")
+        if price_change is not None:
+            lines.append(f"24h涨跌: {price_change:+.2f}%")
+        if volume_change is not None:
+            lines.append(f"成交量变化: {volume_change:+.2f}%")
+
+    # 资金费率
+    funding_data = state.get('funding_rate', {})
+    if funding_data:
+        current_rate = funding_data.get('current_rate')
+        if current_rate is not None:
+            sentiment = "多头" if current_rate > 0 else "空头" if current_rate < 0 else "中性"
+            lines.append(f"资金费率: {current_rate:.4f}% ({sentiment})")
+
+    # 市场压力
+    liquidation_data = state.get('liquidation', {})
+    if liquidation_data:
+        total_liquidation = liquidation_data.get('total_liquidation_usd')
+        if total_liquidation:
+            lines.append(f"市场压力: ${total_liquidation:,.0f}")
+
+    # 消息面数据
+    news_data = state.get('news_sentiment', {})
+    if news_data:
+        overall_sentiment = news_data.get('overall_sentiment', {})
+        if isinstance(overall_sentiment, dict):
+            sentiment = overall_sentiment.get('sentiment')
+            score = overall_sentiment.get('score')
+            if sentiment:
+                lines.append(f"消息面情绪: {sentiment} (评分: {score:.2f})" if score is not None else f"消息面情绪: {sentiment}")
+
+        # 如果有具体的新闻标题
+        crypto_news = news_data.get('crypto_news', {})
+        news_list = crypto_news.get('news', [])
+        if news_list and len(news_list) > 0:
+            lines.append(f"相关新闻数: {len(news_list)} 条")
+            lines.append("最新消息:")
+            for i, news in enumerate(news_list[:3], 1):  # 只显示前3条
+                title = news.get('title', '')
+                if title:
+                    lines.append(f"  {i}. {title[:60]}...")
+
+    # 触发的信号
+    triggered_signals = state.get('triggered_signals', [])
+    if triggered_signals:
+        lines.append(f"触发信号: {', '.join(triggered_signals)}")
+
+    lines.append("=" * 70)
+    return "\n".join(lines)
 
 
 # ============ 构建工作流图 ============

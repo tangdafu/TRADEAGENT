@@ -148,7 +148,7 @@ FEISHU_WEBHOOK=https://open.feishu.cn/open-apis/bot/v2/hook/your_webhook_token
 ### 4. 运行测试
 
 ```bash
-# 单次分析
+# 启动监控
 python src/main.py --symbol BTCUSDT
 
 # 查看帮助
@@ -159,23 +159,23 @@ python src/main.py --help
 
 ## 📖 使用指南
 
-### 单次分析模式
+### 启动监控
 
-适用于临时查看某个币种的市场分析。
+系统会自动持续监控，保存所有分析结果。
 
 ```bash
-# 基础分析
+# 基础监控（默认15分钟间隔）
 python src/main.py --symbol BTCUSDT
 
 # 详细输出（显示原始数据）
 python src/main.py --symbol BTCUSDT --verbose
 
-# 保存到数据库
-python src/main.py --symbol BTCUSDT --save
-
-# 分析其他币种
+# 监控其他币种
 python src/main.py --symbol ETHUSDT
 python src/main.py --symbol SOLUSDT
+
+# 自定义监控间隔
+python src/main.py --symbol BTCUSDT --interval 5
 ```
 
 **输出示例：**
@@ -207,25 +207,23 @@ python src/main.py --symbol SOLUSDT
 
 ```bash
 # 监控单个币种，每15分钟分析一次
-python src/main.py --symbols BTCUSDT --interval 15
-
-# 监控多个币种
-python src/main.py --symbols BTCUSDT ETHUSDT SOLUSDT --interval 15
+python src/main.py --symbol BTCUSDT --interval 15
 
 # 高频监控（每5分钟）
-python src/main.py --symbols BTCUSDT --interval 5
+python src/main.py --symbol BTCUSDT --interval 5
 
 # 详细输出模式
-python src/main.py --symbols BTCUSDT --interval 15 --verbose
+python src/main.py --symbol BTCUSDT --interval 15 --verbose
 ```
 
 **监控输出示例：**
 ```
 ======================================================================
 🔄 监控模式已启动
-📊 监控币种: BTCUSDT, ETHUSDT
+📊 监控币种: BTCUSDT
 ⏰ 监控间隔: 15 分钟
 💾 自动保存: 开启
+🔄 自动更新信号: 每小时一次
 📱 飞书告警: 开启
 
 按 Ctrl+C 停止监控
@@ -350,24 +348,37 @@ MIN_SIGNAL_COUNT = 2  # 至少2个信号才触发AI分析
 - 易于阅读
 - 包含具体数值
 
-### 4. 数据持久化
+### 4. 数据持久化与查询
 
-所有分析结果可选保存到SQLite数据库：
+所有分析结果可选保存到SQLite数据库，并支持强大的查询功能：
 
 **保存内容：**
 - 分析时间、交易对、当前价格
 - 触发信号、AI分析结果
 - 交易建议（仓位、止损、目标）
 
-**当前状态：**
-- ✅ 数据保存功能完整
-- ⏳ 查询功能已实现但未集成到CLI
-- 🔮 未来可扩展：准确率统计、策略优化、Web可视化
+**查询功能：** ✅ 已集成到CLI
+- `--history` - 查询历史分析记录
+- `--stats` - 查看统计报告
+- `--export` - 导出数据到CSV文件
 
-**使用方式：**
-- 监控模式：自动保存所有分析
-- 单次分析：使用 `--save` 参数保存
-- 手动查询：通过Python脚本或SQLite工具
+**准确率追踪：** ✅ 已实现
+- `--accuracy` - 查看信号准确率报告
+- `--update-signals` - 更新信号表现
+- 自动追踪信号触发后的价格变化
+- 计算准确率、达到目标率、触发止损率
+
+**使用示例：**
+```bash
+# 查询历史
+python src/main.py --history BTCUSDT --days 7
+
+# 统计报告
+python src/main.py --stats BTCUSDT --days 30
+
+# 准确率追踪
+python src/main.py --accuracy BTCUSDT --days 30
+```
 
 详细说明：[docs/DATABASE_GUIDE.md](docs/DATABASE_GUIDE.md)
 
@@ -575,7 +586,7 @@ stats = repo.get_signal_statistics("BTCUSDT", days=7)
 - ✅ 信号追踪统计
 
 **改进：**
-- ✅ 统一入口（单次分析 + 监控模式）
+- ✅ 统一入口（专注监控模式）
 - ✅ 优化代码结构
 - ✅ 完善文档
 
@@ -622,5 +633,13 @@ MIT License
 ---
 
 **⭐ 如果这个项目对你有帮助，请给个Star！**
+
+
+
+
+
+
+
+
 
 

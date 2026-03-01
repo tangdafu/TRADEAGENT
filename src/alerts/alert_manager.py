@@ -70,13 +70,13 @@ class AlertManager:
     def _console_alert(self, symbol: str, result: Dict[str, Any]):
         """控制台告警"""
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        logger.warning("\n" + "=" * 70)
-        logger.warning(f"🚨 交易信号提醒 - {symbol} - {timestamp}")
-        logger.warning(f"当前价格: {result.get('current_price', 'N/A')}")
-        logger.warning(f"24h涨跌: {result.get('price_change_24h', 0):.2f}%")
-        logger.warning(f"趋势判断: {result.get('trend_direction', '未知')}")
-        logger.warning(f"信心度: {result.get('confidence', 0)*100:.0f}%")
-        logger.warning("=" * 70)
+        logger.info("\n" + "=" * 70)
+        logger.info(f"🚨 交易信号提醒 - {symbol} - {timestamp}")
+        logger.info(f"当前价格: {result.get('current_price', 'N/A')}")
+        logger.info(f"24h涨跌: {result.get('price_change_24h', 0):.2f}%")
+        logger.info(f"趋势判断: {result.get('trend_direction', '未知')}")
+        logger.info(f"信心度: {result.get('confidence', 0)*100:.0f}%")
+        logger.info("=" * 70)
     
     def _send_feishu(self, symbol: str, result: Dict[str, Any], full_analysis: str = ""):
         """
@@ -229,14 +229,18 @@ class AlertManager:
                         "content": "**📊 AI交易策略**"
                     }
                 })
-                
+
+                # 清理和格式化分析文本
+                analysis_text = self._format_analysis_for_feishu(full_analysis)
+
                 # 截取分析文本（飞书卡片有长度限制，最多3000字符）
-                analysis_text = full_analysis[:3000] if len(full_analysis) > 3000 else full_analysis
-                
+                if len(analysis_text) > 3000:
+                    analysis_text = analysis_text[:3000] + "\n\n...(内容过长，已截断)"
+
                 card["card"]["elements"].append({
                     "tag": "div",
                     "text": {
-                        "tag": "plain_text",
+                        "tag": "lark_md",
                         "content": analysis_text
                     }
                 })
@@ -273,7 +277,48 @@ class AlertManager:
         
         except Exception as e:
             logger.error(f"发送飞书消息时出错: {e}")
-    
+
+    def _format_analysis_for_feishu(self, analysis_text: str) -> str:
+        """
+        格式化AI分析文本以适配飞书Markdown
+
+        Args:
+            analysis_text: 原始分析文本
+
+        Returns:
+            格式化后的文本
+        """
+        import re
+
+        # 移除市场数据摘要部分（已经在卡片中单独显示）
+        if "【市场数据摘要】" in analysis_text:
+            parts = analysis_text.split("【市场数据摘要】", 1)
+            if len(parts) > 1:
+                # 找到摘要结束的位置（下一个分隔线）
+                remaining = parts[1]
+                if "\n\n" in remaining:
+                    analysis_text = remaining.split("\n\n", 1)[1] if len(remaining.split("\n\n", 1)) > 1 else remaining
+
+        # 移除等号分隔线
+        analysis_text = re.sub(r'={3,}', '', analysis_text)
+
+        # 将 ## 标题转换为 **粗体**
+        analysis_text = re.sub(r'^## (.+)$', r'**\1**', analysis_text, flags=re.MULTILINE)
+
+        # 将 ### 标题转换为 **粗体**
+        analysis_text = re.sub(r'^### (.+)$', r'**\1**', analysis_text, flags=re.MULTILINE)
+
+        # 移除 --- 分隔线
+        analysis_text = re.sub(r'^---+$', '', analysis_text, flags=re.MULTILINE)
+
+        # 清理多余的空行（超过2个连续空行）
+        analysis_text = re.sub(r'\n{3,}', '\n\n', analysis_text)
+
+        # 移除开头和结尾的空白
+        analysis_text = analysis_text.strip()
+
+        return analysis_text
+
     def _send_email(self, symbol: str, result: Dict[str, Any]):
         """
         发送邮件（预留）

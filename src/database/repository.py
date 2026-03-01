@@ -80,7 +80,34 @@ class AnalysisRepository:
         
         logger.info(f"分析结果已保存，ID: {analysis_id}")
         return analysis_id
-    
+
+    def extract_alert_data(self, final_state: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        从分析状态中提取告警数据
+
+        Args:
+            final_state: LangGraph工作流的最终状态
+
+        Returns:
+            结构化的告警数据
+        """
+        kline_data = final_state.get('kline_volume', {})
+        analysis_result = final_state.get('analysis_result', '')
+
+        # 复用现有的解析逻辑
+        parsed = self._parse_analysis_result(analysis_result)
+
+        return {
+            'current_price': kline_data.get('current_price'),
+            'price_change_24h': kline_data.get('price_change_pct'),
+            'trend_direction': parsed.get('trend_direction', '未知'),
+            'confidence': parsed.get('confidence', 0),
+            'triggered_signals': final_state.get('triggered_signals', []),
+            'suggested_position': parsed.get('suggested_position'),
+            'stop_loss': parsed.get('stop_loss'),
+            'target_price': parsed.get('target_price'),
+        }
+
     def _parse_analysis_result(self, analysis_text: str) -> Dict[str, Any]:
         """
         从AI分析文本中提取结构化信息

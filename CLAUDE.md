@@ -1,4 +1,4 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -57,21 +57,6 @@ pip install -r requirements.txt
    - Copy the webhook URL and paste into `.env`
 
 ### Running
-
-**Single Analysis Mode:**
-```bash
-# Analyze BTC (default)
-python src/main.py
-
-# Analyze ETH
-python src/main.py --symbol ETHUSDT
-
-# Verbose output with raw data
-python src/main.py --verbose
-
-# Save analysis to database
-python src/main.py --symbol BTCUSDT --save
-```
 
 **Monitoring Mode (24/7 automated monitoring):**
 ```bash
@@ -315,7 +300,7 @@ Logs are saved to `logs/trade_agent.log` with configurable level via `LOG_LEVEL`
 - Conflicting environment variables (ANTHROPIC_API_KEY, CCH_API_KEY) are automatically cleared during initialization and API calls
 - This environment variable handling is critical when using third-party API providers to prevent authentication conflicts
 - Windows console encoding issues are handled by setting stdout to UTF-8 in `src/main.py`
-- **Database**: Analysis records are automatically saved to `data/trading_agent.db` when using `--save` flag or monitoring mode
+- **Database**: Analysis records are automatically saved to `data/trading_agent.db` in monitoring mode
 - **Feishu Alerts**: Only sent when trading opportunities are detected (`has_trading_opportunity=true`)
 - **Monitoring Mode**: Runs continuously until interrupted with Ctrl+C, automatically saves all analyses to database
 
@@ -370,4 +355,8 @@ For more detailed information, see:
 - [docs/DATABASE_GUIDE.md](docs/DATABASE_GUIDE.md) - Database schema and query examples (if available)
 - [docs/USAGE_GUIDE.md](docs/USAGE_GUIDE.md) - Detailed usage guide (if available)
 - [docs/FEISHU_TROUBLESHOOTING.md](docs/FEISHU_TROUBLESHOOTING.md) - Feishu setup and troubleshooting (if available)
+
+
+
+
 

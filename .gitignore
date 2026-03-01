@@ -50,3 +50,4 @@ Thumbs.db
 .coverage
 htmlcov/
 data/trading_agent.db
+data/export_BTCUSDT_20260301_014916.csv
