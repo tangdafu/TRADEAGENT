@@ -98,9 +98,23 @@ def init_database(db_path: str = "data/trading_agent.db"):
             hit_stop_loss BOOLEAN,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
-            
-        cursor.execute("""CREATE INDEX IF NOT EXISTS idx_analysis_symbol_time 
+
+        cursor.execute("""CREATE TABLE IF NOT EXISTS processed_news (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol TEXT NOT NULL,
+            news_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            source TEXT,
+            published_time INTEGER NOT NULL,
+            sentiment TEXT,
+            processed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(symbol, news_id))""")
+
+        cursor.execute("""CREATE INDEX IF NOT EXISTS idx_analysis_symbol_time
             ON analysis_records(symbol, timestamp DESC)""")
+
+        cursor.execute("""CREATE INDEX IF NOT EXISTS idx_processed_news_symbol_time
+            ON processed_news(symbol, published_time DESC)""")
             
         conn.commit()
         logger.info("数据库初始化完成")
@@ -189,3 +203,58 @@ class SignalPerformance:
                 values.append(performance_id)
                 query = f"UPDATE signal_performance SET {', '.join(update_fields)} WHERE id = ?"
                 cursor.execute(query, values)
+
+
+class ProcessedNews:
+    """已处理新闻记录"""
+
+    @staticmethod
+    def create(db: Database, symbol: str, news_id: str, title: str, source: str, published_time: int, sentiment: str) -> bool:
+        """
+        记录已处理的新闻
+
+        Returns:
+            bool: True表示新新闻已记录，False表示新闻已存在
+        """
+        try:
+            with db as conn:
+                cursor = conn.cursor()
+                cursor.execute("""INSERT OR IGNORE INTO processed_news
+                    (symbol, news_id, title, source, published_time, sentiment)
+                    VALUES (?, ?, ?, ?, ?, ?)""",
+                    (symbol, news_id, title, source, published_time, sentiment))
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"记录新闻失败: {e}")
+            return False
+
+    @staticmethod
+    def is_processed(db: Database, symbol: str, news_id: str) -> bool:
+        """检查新闻是否已处理"""
+        with db as conn:
+            cursor = conn.cursor()
+            cursor.execute("""SELECT COUNT(*) as count FROM processed_news
+                WHERE symbol = ? AND news_id = ?""", (symbol, news_id))
+            return cursor.fetchone()['count'] > 0
+
+    @staticmethod
+    def get_latest_timestamp(db: Database, symbol: str) -> int:
+        """获取最新处理的新闻时间戳"""
+        with db as conn:
+            cursor = conn.cursor()
+            cursor.execute("""SELECT MAX(published_time) as latest FROM processed_news
+                WHERE symbol = ?""", (symbol,))
+            result = cursor.fetchone()['latest']
+            return result if result else 0
+
+    @staticmethod
+    def cleanup_old_news(db: Database, days: int = 7):
+        """清理旧新闻记录"""
+        from datetime import datetime, timedelta
+        cutoff_time = int((datetime.now() - timedelta(days=days)).timestamp())
+        with db as conn:
+            cursor = conn.cursor()
+            cursor.execute("""DELETE FROM processed_news WHERE published_time < ?""", (cutoff_time,))
+            deleted = cursor.rowcount
+            if deleted > 0:
+                logger.info(f"清理了 {deleted} 条旧新闻记录")

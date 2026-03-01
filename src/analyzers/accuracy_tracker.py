@@ -203,14 +203,19 @@ class AccuracyTracker:
                 """, (symbol, cutoff_time))
                 hit_stop_signals = cursor.fetchone()['hit_stop']
                 
-                # 平均价格变化
+                # 平均价格变化和收益统计
                 cursor.execute("""
-                    SELECT AVG(price_change_pct) as avg_change
+                    SELECT AVG(price_change_pct) as avg_change,
+                           MAX(price_change_pct) as max_profit,
+                           MIN(price_change_pct) as min_loss
                     FROM signal_performance
-                    WHERE symbol = ? AND entry_time >= ? 
+                    WHERE symbol = ? AND entry_time >= ?
                     AND exit_price IS NOT NULL
                 """, (symbol, cutoff_time))
-                avg_change = cursor.fetchone()['avg_change'] or 0
+                result = cursor.fetchone()
+                avg_change = result['avg_change'] or 0
+                max_profit = result['max_profit'] or 0
+                min_loss = result['min_loss'] or 0
                 
                 # 按趋势分类统计
                 cursor.execute("""
@@ -236,11 +241,15 @@ class AccuracyTracker:
                     'closed_signals': closed_signals,
                     'pending_signals': total_signals - closed_signals,
                     'profitable_signals': profitable_signals,
-                    'accuracy': accuracy,
+                    'loss_signals': closed_signals - profitable_signals,
+                    'accuracy': accuracy / 100,
                     'hit_target_signals': hit_target_signals,
                     'target_hit_rate': target_hit_rate,
                     'hit_stop_signals': hit_stop_signals,
                     'avg_price_change': avg_change,
+                    'avg_profit': avg_change,
+                    'max_profit': max_profit,
+                    'max_loss': min_loss,
                     'trend_stats': [dict(row) for row in trend_stats]
                 }
                 

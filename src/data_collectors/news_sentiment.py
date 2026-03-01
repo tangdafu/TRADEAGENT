@@ -4,6 +4,7 @@ from loguru import logger
 from .base import BaseCollector
 from config.settings import settings
 from datetime import datetime
+import hashlib
 
 
 class NewsSentimentCollector(BaseCollector):
@@ -13,6 +14,14 @@ class NewsSentimentCollector(BaseCollector):
         super().__init__()
         self.cryptocompare_api_key = settings.CRYPTOCOMPARE_API_KEY
         self.newsapi_key = settings.NEWSAPI_KEY
+        self.db = None  # 延迟初始化
+
+    def _get_db(self):
+        """延迟初始化数据库连接"""
+        if self.db is None:
+            from src.database.models import Database
+            self.db = Database()
+        return self.db
 
     def collect(self, symbol: str) -> Dict[str, Any]:
         """采集消息面数据"""
@@ -51,7 +60,7 @@ class NewsSentimentCollector(BaseCollector):
         return self._retry_on_error(_fetch)
 
     def _get_crypto_news(self, coin: str) -> Dict[str, Any]:
-        """获取加密货币新闻（CryptoCompare API）"""
+        """获取加密货币新闻（CryptoCompare API）- 带去重机制"""
         try:
             if not self.cryptocompare_api_key:
                 logger.warning("未配置CryptoCompare API密钥，无法获取加密货币新闻")
@@ -63,6 +72,7 @@ class NewsSentimentCollector(BaseCollector):
                     "neutral_count": 0,
                     "sentiment_score": 0.0,
                     "data_available": False,
+                    "new_news_count": 0,
                 }
 
             url = "https://min-api.cryptocompare.com/data/v2/news/"
@@ -78,16 +88,33 @@ class NewsSentimentCollector(BaseCollector):
 
             # 检查是否有数据返回（CryptoCompare API v2格式）
             if "Data" in data and data.get("Data"):
-                news_items = data.get("Data", [])[:5]  # 取最新5条
+                from src.database.models import ProcessedNews
+                db = self._get_db()
+
+                news_items = data.get("Data", [])[:10]  # 取最新10条
 
                 # 分析新闻情绪
                 positive_count = 0
                 negative_count = 0
                 neutral_count = 0
+                new_news_count = 0
 
                 news_list = []
                 for item in news_items:
                     title = item.get("title", "")
+                    published_time = item.get("published_on", 0)
+                    source = item.get("source", "")
+
+                    # 生成新闻ID（基于标题和发布时间的哈希）
+                    news_id = hashlib.md5(f"{title}_{published_time}".encode()).hexdigest()
+
+                    # 检查是否已处理（但不跳过，仍然采集）
+                    is_new = not ProcessedNews.is_processed(db, coin, news_id)
+                    if is_new:
+                        new_news_count += 1
+                        # 记录已处理的新闻
+                        ProcessedNews.create(db, coin, news_id, title, source, published_time, "")
+
                     sentiment = self._analyze_news_sentiment(title)
 
                     if sentiment == "positive":
@@ -99,10 +126,14 @@ class NewsSentimentCollector(BaseCollector):
 
                     news_list.append({
                         "title": title,
-                        "source": item.get("source", ""),
-                        "published": item.get("published_on", 0),
+                        "source": source,
+                        "published": published_time,
                         "sentiment": sentiment,
+                        "news_id": news_id,
+                        "is_new": is_new,
                     })
+
+                logger.info(f"采集到 {len(news_list)} 条新闻，其中 {new_news_count} 条新新闻")
 
                 return {
                     "news_count": len(news_list),
@@ -114,6 +145,7 @@ class NewsSentimentCollector(BaseCollector):
                         positive_count, negative_count, neutral_count
                     ),
                     "data_available": True,
+                    "new_news_count": new_news_count,
                 }
             else:
                 logger.warning(f"CryptoCompare API返回失败: {data.get('Message', 'Unknown error')}")
@@ -125,6 +157,7 @@ class NewsSentimentCollector(BaseCollector):
                     "neutral_count": 0,
                     "sentiment_score": 0.0,
                     "data_available": False,
+                    "new_news_count": 0,
                 }
 
         except Exception as e:
@@ -137,6 +170,7 @@ class NewsSentimentCollector(BaseCollector):
                 "neutral_count": 0,
                 "sentiment_score": 0.0,
                 "data_available": False,
+                "new_news_count": 0,
             }
 
     def _get_social_sentiment(self, coin: str) -> Dict[str, Any]:

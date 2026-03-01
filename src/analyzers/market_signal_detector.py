@@ -230,8 +230,17 @@ class MarketSignalDetector:
     def _check_news_sentiment_signal(
         self, news_sentiment: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """检查消息面信号"""
+        """检查消息面信号 - 只有新新闻才触发"""
         if not news_sentiment or not news_sentiment.get("data_available"):
+            return None
+
+        # 检查是否有新新闻
+        crypto_news = news_sentiment.get("crypto_news", {})
+        new_news_count = crypto_news.get("new_news_count", 0)
+
+        # 如果没有新新闻，不触发信号
+        if new_news_count == 0:
+            logger.debug("没有新新闻，跳过消息面信号检测")
             return None
 
         overall_sentiment = news_sentiment.get("overall_sentiment", {})
@@ -245,14 +254,14 @@ class MarketSignalDetector:
                     "type": "消息面极度乐观",
                     "strength": "中",
                     "value": score,
-                    "description": f"消息面情绪得分 {score:.2f}，倾向：{sentiment}",
+                    "description": f"消息面情绪得分 {score:.2f}，倾向：{sentiment}（{new_news_count}条新新闻）",
                 }
             else:
                 return {
                     "type": "消息面极度悲观",
                     "strength": "中",
                     "value": score,
-                    "description": f"消息面情绪得分 {score:.2f}，倾向：{sentiment}",
+                    "description": f"消息面情绪得分 {score:.2f}，倾向：{sentiment}（{new_news_count}条新新闻）",
                 }
 
         return None
